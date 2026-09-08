@@ -1,8 +1,6 @@
 {
   "name": "music-app",
-
   "main": "src/index.js",
-
   "compatibility_date": "2026-09-07",
 
   "r2_buckets": [
@@ -16,7 +14,7 @@
     {
       "binding": "DB",
       "database_name": "music-db",
-      "database_id": "YOUR_DATABASE_ID"
+      "database_id": "3ff9c7ff-4521-44d0-ae81-540cd9a0ba90"
     }
   ]
 }
