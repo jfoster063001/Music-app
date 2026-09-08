@@ -12,5 +12,8 @@
     "@cloudflare/vitest-plugin": "^1.0.0",
     "vitest": "~4.1.0",
     "wrangler": "^4.129.1"
+  },
+  "dependencies": {
+    "itty-router": "^5.0.24"
   }
 }

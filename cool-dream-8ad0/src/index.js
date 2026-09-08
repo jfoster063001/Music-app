@@ -2,18 +2,16 @@ import { Router } from "itty-router";
 
 const router = Router();
 
-/**
- * ============================
- * Utility Functions
- * ============================
- */
+/* =========================================================
+   Utilities
+========================================================= */
 
-function json(data, status = 200) {
+function json(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*"
+      ...extraHeaders
     }
   });
 }
@@ -26,18 +24,9 @@ function forbidden() {
   return json({ error: "Forbidden" }, 403);
 }
 
-
-/**
- * ============================
- * Password Hashing
- * ============================
- *
- * Uses SHA-256 as a basic example.
- *
- * For production, consider using
- * PBKDF2 or another password hashing
- * strategy.
- */
+/* =========================================================
+   Password Hashing
+========================================================= */
 
 async function hashPassword(password) {
   const data = new TextEncoder().encode(password);
@@ -52,23 +41,19 @@ async function hashPassword(password) {
     .join("");
 }
 
-
-/**
- * ============================
- * Authentication
- * ============================
- */
+/* =========================================================
+   Authentication
+========================================================= */
 
 async function createSession(user, env) {
   const payload = {
     id: user.id,
     username: user.username,
     role: user.role,
-    exp: Date.now() + (1000 * 60 * 60 * 24 * 7)
+    exp: Date.now() + 1000 * 60 * 60 * 24 * 7
   };
 
   const data = JSON.stringify(payload);
-
   const encoder = new TextEncoder();
 
   const key = await crypto.subtle.importKey(
@@ -92,19 +77,22 @@ async function createSession(user, env) {
     String.fromCharCode(...new Uint8Array(signature))
   );
 
-  return btoa(data) + "." + signatureBase64;
+  return (
+    btoa(data) +
+    "." +
+    signatureBase64
+  );
 }
 
 
 async function getUserFromRequest(request, env) {
-
   const cookie = request.headers.get("Cookie");
 
   if (!cookie) {
     return null;
   }
 
-  const match = cookie.match(/session=([^;]+)/);
+  const match = cookie.match(/(?:^|;\s*)session=([^;]+)/);
 
   if (!match) {
     return null;
@@ -112,45 +100,64 @@ async function getUserFromRequest(request, env) {
 
   const token = match[1];
 
-  const [payloadBase64, signature] = token.split(".");
+  const [payloadBase64, signatureBase64] =
+    token.split(".");
 
-  if (!payloadBase64 || !signature) {
+  if (!payloadBase64 || !signatureBase64) {
     return null;
   }
 
   try {
-
     const payload = JSON.parse(
       atob(payloadBase64)
     );
 
-    if (payload.exp < Date.now()) {
+    if (!payload.exp || payload.exp < Date.now()) {
+      return null;
+    }
+
+    const encoder = new TextEncoder();
+
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(env.SESSION_SECRET),
+      {
+        name: "HMAC",
+        hash: "SHA-256"
+      },
+      false,
+      ["verify"]
+    );
+
+    const signatureBytes = Uint8Array.from(
+      atob(signatureBase64),
+      c => c.charCodeAt(0)
+    );
+
+    const valid = await crypto.subtle.verify(
+      "HMAC",
+      key,
+      signatureBytes,
+      encoder.encode(JSON.stringify(payload))
+    );
+
+    if (!valid) {
       return null;
     }
 
     return payload;
 
-  } catch {
+  } catch (error) {
+    console.error("Session validation error:", error);
     return null;
   }
 }
 
-
-/**
- * ============================
- * PUBLIC ROUTES
- * ============================
- */
-
-
-/**
- * Get all songs
- *
- * GET /api/songs
- */
+/* =========================================================
+   PUBLIC API
+========================================================= */
 
 router.get("/api/songs", async (request, env) => {
-
   const results = await env.DB.prepare(`
     SELECT
       id,
@@ -166,83 +173,80 @@ router.get("/api/songs", async (request, env) => {
 });
 
 
-/**
- * Stream a song
- *
- * GET /api/songs/:id/stream
- */
+router.get(
+  "/api/songs/:id/stream",
+  async (request, env) => {
+    const song = await env.DB.prepare(`
+      SELECT *
+      FROM songs
+      WHERE id = ?
+    `)
+      .bind(request.params.id)
+      .first();
 
-router.get("/api/songs/:id/stream", async (request, env) => {
-
-  const song = await env.DB.prepare(`
-    SELECT *
-    FROM songs
-    WHERE id = ?
-  `)
-    .bind(request.params.id)
-    .first();
-
-  if (!song) {
-    return json({
-      error: "Song not found"
-    }, 404);
-  }
-
-  const object = await env.MUSIC_BUCKET.get(
-    song.r2_key
-  );
-
-  if (!object) {
-    return json({
-      error: "Music file missing"
-    }, 404);
-  }
-
-  const headers = new Headers();
-
-  headers.set(
-    "Content-Type",
-    object.httpMetadata?.contentType ||
-      "audio/mpeg"
-  );
-
-  headers.set(
-    "Accept-Ranges",
-    "bytes"
-  );
-
-  return new Response(
-    object.body,
-    {
-      headers
+    if (!song) {
+      return json(
+        { error: "Song not found" },
+        404
+      );
     }
-  );
-});
 
+    const object = await env.MUSIC_BUCKET.get(
+      song.r2_key
+    );
 
-/**
- * ============================
- * AUTH ROUTES
- * ============================
- */
+    if (!object) {
+      return json(
+        { error: "Music file missing" },
+        404
+      );
+    }
 
+    const headers = new Headers();
 
-/**
- * Login
- *
- * POST /api/auth/login
- *
- * {
- *   "username": "jackson",
- *   "password": "password"
- * }
- */
+    headers.set(
+      "Content-Type",
+      object.httpMetadata?.contentType ||
+        "audio/mpeg"
+    );
+
+    headers.set(
+      "Content-Length",
+      object.size.toString()
+    );
+
+    headers.set(
+      "Accept-Ranges",
+      "bytes"
+    );
+
+    return new Response(
+      object.body,
+      {
+        status: 200,
+        headers
+      }
+    );
+  }
+);
+
+/* =========================================================
+   AUTH
+========================================================= */
 
 router.post(
   "/api/auth/login",
   async (request, env) => {
+    let body;
 
-    const body = await request.json();
+    try {
+      body = await request.json();
+    } catch {
+      return json(
+        { error: "Invalid JSON" },
+        400
+      );
+    }
 
     const {
       username,
@@ -250,9 +254,13 @@ router.post(
     } = body;
 
     if (!username || !password) {
-      return json({
-        error: "Username and password required"
-      }, 400);
+      return json(
+        {
+          error:
+            "Username and password required"
+        },
+        400
+      );
     }
 
     const user = await env.DB.prepare(`
@@ -267,9 +275,8 @@ router.post(
       return unauthorized();
     }
 
-    const passwordHash = await hashPassword(
-      password
-    );
+    const passwordHash =
+      await hashPassword(password);
 
     if (
       passwordHash !==
@@ -278,48 +285,38 @@ router.post(
       return unauthorized();
     }
 
-    const session = await createSession(
-      user,
-      env
-    );
+    const session =
+      await createSession(
+        user,
+        env
+      );
 
-    return new Response(
-      JSON.stringify({
+    return json(
+      {
         success: true,
         user: {
           username: user.username,
           role: user.role
         }
-      }),
+      },
+      200,
       {
-        headers: {
-          "Content-Type":
-            "application/json",
-
-          "Set-Cookie":
-            `session=${session}; ` +
-            `HttpOnly; ` +
-            `Secure; ` +
-            `SameSite=Lax; ` +
-            `Path=/; ` +
-            `Max-Age=604800`
-        }
+        "Set-Cookie":
+          `session=${session}; ` +
+          `HttpOnly; ` +
+          `Secure; ` +
+          `SameSite=Lax; ` +
+          `Path=/; ` +
+          `Max-Age=604800`
       }
     );
   }
 );
 
 
-/**
- * Get current user
- *
- * GET /api/auth/me
- */
-
 router.get(
   "/api/auth/me",
   async (request, env) => {
-
     const user =
       await getUserFromRequest(
         request,
@@ -337,54 +334,34 @@ router.get(
 );
 
 
-/**
- * Logout
- *
- * POST /api/auth/logout
- */
-
 router.post(
   "/api/auth/logout",
   async () => {
-
-    return new Response(
-      JSON.stringify({
-        success: true
-      }),
+    return json(
       {
-        headers: {
-          "Content-Type":
-            "application/json",
-
-          "Set-Cookie":
-            "session=; " +
-            "HttpOnly; " +
-            "Secure; " +
-            "Path=/; " +
-            "Max-Age=0"
-        }
+        success: true
+      },
+      200,
+      {
+        "Set-Cookie":
+          "session=; " +
+          "HttpOnly; " +
+          "Secure; " +
+          "SameSite=Lax; " +
+          "Path=/; " +
+          "Max-Age=0"
       }
     );
   }
 );
 
-
-/**
- * ============================
- * UPLOAD MUSIC
- * ============================
- *
- * POST /api/songs/upload
- *
- * Only:
- * admin
- * uploader
- */
+/* =========================================================
+   UPLOAD
+========================================================= */
 
 router.post(
   "/api/songs/upload",
   async (request, env) => {
-
     const user =
       await getUserFromRequest(
         request,
@@ -414,121 +391,102 @@ router.post(
     const artist =
       formData.get("artist");
 
-    if (!file) {
-      return json({
-        error: "Music file required"
-      }, 400);
+    if (
+      !file ||
+      typeof file.stream !== "function"
+    ) {
+      return json(
+        {
+          error:
+            "Music file required"
+        },
+        400
+      );
     }
-
-    /*
-     * Only allow audio files
-     */
 
     if (
-      !file.type.startsWith(
-        "audio/"
-      )
+      !file.type.startsWith("audio/")
     ) {
-      return json({
-        error:
-          "Only audio files are allowed"
-      }, 400);
+      return json(
+        {
+          error:
+            "Only audio files are allowed"
+        },
+        400
+      );
     }
-
-
-    /*
-     * Generate unique ID
-     */
 
     const songId =
       crypto.randomUUID();
 
-
-    /*
-     * Generate R2 filename
-     */
-
     const extension =
-      file.name.split(".").pop();
+      file.name.includes(".")
+        ? file.name.split(".").pop()
+        : "audio";
 
     const r2Key =
       `${songId}.${extension}`;
-
-
-    /*
-     * Upload file to R2
-     */
 
     await env.MUSIC_BUCKET.put(
       r2Key,
       file.stream(),
       {
         httpMetadata: {
-          contentType:
-            file.type
+          contentType: file.type
         }
       }
     );
 
-
-    /*
-     * Save metadata in D1
-     */
-
-    await env.DB.prepare(`
-      INSERT INTO songs (
-        id,
-        title,
-        artist,
-        filename,
-        r2_key,
-        uploaded_by
-      )
-
-      VALUES (?, ?, ?, ?, ?, ?)
-    `)
-      .bind(
-        songId,
-        title ||
+    try {
+      await env.DB.prepare(`
+        INSERT INTO songs (
+          id,
+          title,
+          artist,
+          filename,
+          r2_key,
+          uploaded_by
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+      `)
+        .bind(
+          songId,
+          title || file.name,
+          artist || "Unknown Artist",
           file.name,
+          r2Key,
+          user.id
+        )
+        .run();
 
-        artist ||
-          "Unknown Artist",
+    } catch (error) {
 
-        file.name,
+      // If D1 fails, clean up the R2 object.
+      await env.MUSIC_BUCKET.delete(
+        r2Key
+      );
 
-        r2Key,
-
-        user.id
-      )
-      .run();
-
+      throw error;
+    }
 
     return json({
       success: true,
-
       song: {
         id: songId,
-        title,
-        artist
+        title: title || file.name,
+        artist: artist || "Unknown Artist"
       }
     });
   }
 );
 
-
-/**
- * ============================
- * DELETE SONG
- * ============================
- *
- * Admin only
- */
+/* =========================================================
+   DELETE SONG
+========================================================= */
 
 router.delete(
   "/api/songs/:id",
   async (request, env) => {
-
     const user =
       await getUserFromRequest(
         request,
@@ -539,9 +497,7 @@ router.delete(
       return unauthorized();
     }
 
-    if (
-      user.role !== "admin"
-    ) {
+    if (user.role !== "admin") {
       return forbidden();
     }
 
@@ -551,41 +507,29 @@ router.delete(
         FROM songs
         WHERE id = ?
       `)
-        .bind(
-          request.params.id
-        )
+        .bind(request.params.id)
         .first();
 
     if (!song) {
-      return json({
-        error:
-          "Song not found"
-      }, 404);
+      return json(
+        {
+          error:
+            "Song not found"
+        },
+        404
+      );
     }
-
-
-    /*
-     * Delete from R2
-     */
 
     await env.MUSIC_BUCKET.delete(
       song.r2_key
     );
 
-
-    /*
-     * Delete metadata
-     */
-
     await env.DB.prepare(`
       DELETE FROM songs
       WHERE id = ?
     `)
-      .bind(
-        request.params.id
-      )
+      .bind(request.params.id)
       .run();
-
 
     return json({
       success: true
@@ -593,19 +537,13 @@ router.delete(
   }
 );
 
-
-/**
- * ============================
- * CREATE USER
- * ============================
- *
- * Admin only
- */
+/* =========================================================
+   CREATE USER
+========================================================= */
 
 router.post(
   "/api/users",
   async (request, env) => {
-
     const currentUser =
       await getUserFromRequest(
         request,
@@ -619,96 +557,151 @@ router.post(
       return forbidden();
     }
 
+    let body;
+
+    try {
+      body = await request.json();
+    } catch {
+      return json(
+        { error: "Invalid JSON" },
+        400
+      );
+    }
+
     const {
       username,
       password,
       role
-    } = await request.json();
+    } = body;
 
-
-    if (
-      !username ||
-      !password
-    ) {
-      return json({
-        error:
-          "Username and password required"
-      }, 400);
+    if (!username || !password) {
+      return json(
+        {
+          error:
+            "Username and password required"
+        },
+        400
+      );
     }
 
+    const userRole =
+      role === "admin"
+        ? "admin"
+        : "uploader";
 
     const passwordHash =
       await hashPassword(
         password
       );
 
-
     const userId =
       crypto.randomUUID();
 
+    try {
 
-    await env.DB.prepare(`
-      INSERT INTO users (
-        id,
-        username,
-        password_hash,
-        role
-      )
+      await env.DB.prepare(`
+        INSERT INTO users (
+          id,
+          username,
+          password_hash,
+          role
+        )
+        VALUES (?, ?, ?, ?)
+      `)
+        .bind(
+          userId,
+          username,
+          passwordHash,
+          userRole
+        )
+        .run();
 
-      VALUES (?, ?, ?, ?)
-    `)
-      .bind(
-        userId,
-        username,
-        passwordHash,
-        role || "uploader"
-      )
-      .run();
+    } catch (error) {
 
+      return json(
+        {
+          error:
+            "Username already exists or database error"
+        },
+        409
+      );
+    }
 
     return json({
       success: true,
-
       user: {
         id: userId,
         username,
-        role:
-          role || "uploader"
+        role: userRole
       }
     });
   }
 );
 
+/* =========================================================
+   API 404
+========================================================= */
 
-/**
- * ============================
- * FALLBACK
- * ============================
- */
-
-router.all("*", () => {
-
-  return json({
-    error:
-      "Route not found"
-  }, 404);
-
-});
-
-
-export default {
-
-  async fetch(
-    request,
-    env,
-    ctx
-  ) {
-
-    return router.handle(
-      request,
-      env,
-      ctx
+router.all(
+  "/api/*",
+  () => {
+    return json(
+      {
+        error:
+          "API route not found"
+      },
+      404
     );
   }
+);
 
+/* =========================================================
+   WORKER
+========================================================= */
+
+export default {
+  async fetch(request, env, ctx) {
+
+    try {
+
+      /*
+       * API requests go through itty-router.
+       */
+      if (
+        new URL(request.url)
+          .pathname
+          .startsWith("/api/")
+      ) {
+        return await router.handle(
+          request,
+          env,
+          ctx
+        );
+      }
+
+      /*
+       * Everything else is served
+       * from ./public using the
+       * Cloudflare Assets binding.
+       */
+      return env.ASSETS.fetch(request);
+
+    } catch (error) {
+
+      console.error(
+        "Worker error:",
+        error
+      );
+
+      return json(
+        {
+          error:
+            "Internal server error",
+          message:
+            error.message
+        },
+        500
+      );
+    }
+  }
 };
