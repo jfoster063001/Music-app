@@ -1,10 +1,19 @@
 import { getPublicState } from "../services/tournamentService.js";
-import { joinAudience, submitVote } from "../services/votingService.js";
+import {
+  joinAudience,
+  submitVote,
+  touchAudience
+} from "../services/votingService.js";
 import { json } from "../utils/response.js";
 
 export function registerVotingRoutes(router) {
   router.get("/api/voting/state", async (request, env) => {
     const audienceId = new URL(request.url).searchParams.get("audienceId");
+
+    if (audienceId) {
+      await touchAudience(audienceId, env);
+    }
+
     return json(await getPublicState(env, audienceId));
   });
 

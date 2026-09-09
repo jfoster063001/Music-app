@@ -17,39 +17,57 @@
 
     <section id="noTournamentScreen" class="vote-panel hidden">
       <h2>No tournament is active</h2>
-      <p>Keep this page open. It will update when the host starts one.</p>
+      <p class="muted">Keep this page open. It will update automatically.</p>
     </section>
 
     <section id="joinScreen" class="vote-panel hidden">
       <h2>Join the audience</h2>
+      <p class="muted">Joining keeps you in the active audience count for automatic voting.</p>
       <form id="joinForm" class="stack">
-        <input name="displayName" placeholder="Your name (optional)" maxlength="40">
-        <button class="button primary big" type="submit">Join</button>
+        <input id="displayNameInput" name="displayName" placeholder="Your name (optional)" maxlength="40">
+        <button class="button primary big" type="submit">Join Audience</button>
       </form>
     </section>
 
     <section id="waitingScreen" class="vote-panel hidden">
+      <p id="waitingEyebrow" class="eyebrow">GET READY</p>
       <h2 id="waitingMessage">Waiting for the host…</h2>
-      <div class="pulse"></div>
+      <strong id="waitingCountdown" class="waiting-countdown"></strong>
+      <div id="waitingPulse" class="pulse"></div>
     </section>
 
     <section id="votingScreen" class="hidden">
-      <h2>Which song did you like more?</h2>
+      <div class="vote-heading">
+        <div>
+          <p class="eyebrow">VOTING OPEN</p>
+          <h2>Which song did you like more?</h2>
+        </div>
+        <strong id="votingCountdown" class="voting-countdown">30</strong>
+      </div>
+
       <p id="liveVoteCount" class="live-vote-count"></p>
+
       <div class="vote-options">
-        <button id="songAButton" class="vote-button"></button>
+        <button id="songAButton" class="vote-button" type="button"></button>
         <div class="vote-vs">VS</div>
-        <button id="songBButton" class="vote-button"></button>
+        <button id="songBButton" class="vote-button" type="button"></button>
       </div>
     </section>
 
     <section id="resultScreen" class="vote-panel hidden">
-      <p class="eyebrow">WINNER</p>
+      <p class="eyebrow">RESULTS</p>
       <h2 id="winnerName">Results are in!</h2>
-      <p>Waiting for the next matchup.</p>
+      <p id="finalVoteCount" class="muted"></p>
+      <p class="muted">The next matchup will begin automatically.</p>
     </section>
 
-    <p id="votingMessage" class="voting-message"></p>
+    <section id="completedScreen" class="vote-panel hidden">
+      <p class="eyebrow">TOURNAMENT COMPLETE</p>
+      <h2>Thanks for voting!</h2>
+      <p class="muted">Check the main display for the final standings.</p>
+    </section>
+
+    <p id="votingMessage" class="voting-message" aria-live="polite"></p>
   </main>
 
   <script type="module" src="/js/voting/voting.js"></script>

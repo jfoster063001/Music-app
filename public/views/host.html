@@ -11,14 +11,16 @@
 <body>
   <main class="host-shell">
     <section id="accessPanel" class="panel login-panel">
-      <h1>Host Access</h1>
-      <p class="muted">Enter the host admin secret to unlock tournament controls.</p>
+      <p class="eyebrow">HOST ACCESS</p>
+      <h1>Song Clash Control Center</h1>
+      <p class="muted">Enter the host secret from your local <code>.dev.vars</code> file.</p>
+
       <form id="accessForm" class="stack">
         <label>
           Host secret
           <input id="hostSecretInput" name="hostSecret" type="password" autocomplete="off" required>
         </label>
-        <button class="button primary" type="submit">Unlock Host Controls</button>
+        <button class="button primary big" type="submit">Unlock Host</button>
       </form>
     </section>
 
@@ -27,57 +29,141 @@
         <div>
           <p class="eyebrow">CONTROL CENTER</p>
           <h1>Song Clash Host</h1>
-          <p class="muted">Single-operator host mode</p>
+          <p class="muted">Create the tournament, then let automatic mode run the show.</p>
         </div>
+
         <div class="header-actions">
-          <a class="button" href="/upload" target="_blank">Open Upload Page</a>
-          <a class="button" href="/display" target="_blank">Open Display</a>
-          <a class="button" href="/voting" target="_blank">Open Voting</a>
-          <button id="lockHostButton" class="button danger">Lock Host</button>
+          <a class="button" href="/upload" target="_blank" rel="noopener">Player Upload</a>
+          <a class="button" href="/display" target="_blank" rel="noopener">Display</a>
+          <a class="button" href="/voting" target="_blank" rel="noopener">Voting</a>
+          <button id="lockHostButton" class="button danger" type="button">Lock</button>
         </div>
       </header>
 
-      <p id="statusMessage" class="status-message"></p>
+      <p id="statusMessage" class="status-message" aria-live="polite"></p>
+
+      <section id="activeControls" class="panel game-panel hidden">
+        <div class="control-heading">
+          <div>
+            <p class="eyebrow">CURRENT TOURNAMENT</p>
+            <h2 id="currentTournamentName">—</h2>
+            <p id="currentTournamentMeta" class="muted"></p>
+          </div>
+
+          <div class="state-stack">
+            <div class="state-pill">State <strong id="stateLabel">setup</strong></div>
+            <div class="state-pill phase-pill">Timer <strong id="phaseTimer">—</strong></div>
+          </div>
+        </div>
+
+        <div class="metric-row">
+          <div>
+            <span>Active audience</span>
+            <strong id="audienceCount">0</strong>
+          </div>
+          <div>
+            <span>Votes submitted</span>
+            <strong id="voteCount">0</strong>
+          </div>
+          <div>
+            <span>Automation</span>
+            <strong id="automationStatus">Paused</strong>
+          </div>
+        </div>
+
+        <div class="matchup-grid">
+          <article id="hostSongACard" class="song-card">
+            <p>SONG A</p>
+            <h3 id="songATitle">—</h3>
+          </article>
+
+          <div class="vs">VS</div>
+
+          <article id="hostSongBCard" class="song-card">
+            <p>SONG B</p>
+            <h3 id="songBTitle">—</h3>
+          </article>
+        </div>
+
+        <div class="primary-game-controls">
+          <button id="startTournament" class="button success big hidden" type="button">
+            Start Tournament + Automatic Playback
+          </button>
+          <button id="enableAudio" class="button" type="button">Enable Audio</button>
+          <button id="resumeAutomation" class="button primary" type="button">Resume Automatic Game</button>
+          <button id="pauseAutomation" class="button" type="button">Pause Automatic Game</button>
+          <button id="skipAudio" class="button" type="button">Skip Current Song</button>
+        </div>
+
+        <p class="automation-note muted">
+          Automatic mode: 3-second countdown → Song A → 3-second countdown → Song B → 30 seconds of voting → animated results → next matchup.
+        </p>
+
+        <div id="tiePanel" class="tie-panel hidden">
+          <strong>The vote is tied. Choose the winner to continue:</strong>
+          <div class="button-row">
+            <button id="tieA" class="button primary" type="button"></button>
+            <button id="tieB" class="button primary" type="button"></button>
+          </div>
+        </div>
+
+        <details class="advanced-controls">
+          <summary>Advanced / recovery controls</summary>
+          <p class="muted">Use these only if you need to recover from a bad state during a practice run.</p>
+          <div class="button-row">
+            <button id="manualRestartMatch" class="button" type="button">Restart Current Matchup</button>
+            <button id="manualOpenVoting" class="button" type="button">Open Voting Now</button>
+            <button id="manualCloseVoting" class="button" type="button">Close Voting Now</button>
+            <button id="manualAdvance" class="button" type="button">Advance Matchup</button>
+            <button id="deleteTournament" class="button danger" type="button">Delete Tournament</button>
+          </div>
+        </details>
+      </section>
 
       <div class="host-grid">
-        <section class="panel">
-          <h2>Song Library</h2>
-          <form id="uploadForm" class="stack">
-            <label>
-              Upload secret
-              <input id="uploadSecretInput" name="uploadSecret" type="password" autocomplete="off" required>
-            </label>
-            <input name="title" placeholder="Song title" required>
-            <input name="artist" placeholder="Artist">
-            <input name="file" type="file" accept="audio/*" required>
-            <button class="button" type="submit">Upload Song</button>
+        <section class="panel submissions-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">SUBMISSIONS</p>
+              <h2>Player Uploads</h2>
+            </div>
+            <a class="button" href="/upload" target="_blank" rel="noopener">Open Upload Page</a>
+          </div>
+
+          <p class="muted">
+            Generate one code per player. Each code can submit exactly one song.
+          </p>
+
+          <form id="uploadCodeForm">
+            <button class="button primary" type="submit">Generate Upload Code</button>
           </form>
 
-          <h3>Player upload codes</h3>
-          <p class="muted">Each code can be used to upload one song one time on the player upload page.</p>
-          <form id="uploadCodeForm" class="stack">
-            <label>
-              Create code (optional, leave blank to auto-generate)
-              <input id="uploadCodeInput" name="code" placeholder="Example: PLAYER07">
-            </label>
-            <button class="button" type="submit">Create Upload Code</button>
-          </form>
-          <div class="button-row">
-            <button id="refreshUploadCodes" class="button" type="button">Refresh Code Status</button>
-            <button id="exportUploadCodesCsv" class="button" type="button">Export Codes CSV</button>
+          <div class="button-row compact-row">
+            <button id="refreshUploadCodes" class="button" type="button">Refresh Codes</button>
+            <button id="exportUploadCodesCsv" class="button" type="button">Export CSV</button>
           </div>
+
           <div id="uploadCodeList" class="upload-code-list"></div>
 
-          <h3>All uploaded songs</h3>
-          <p class="muted">Artists are visible here for duplicate cleanup. Public pages only show song titles.</p>
+          <div class="section-divider"></div>
+
+          <div class="panel-heading">
+            <div>
+              <h3>Song Library</h3>
+              <p class="muted">Artist names stay hidden from public matchup screens.</p>
+            </div>
+          </div>
+
           <div id="songAdminList" class="song-admin-list"></div>
         </section>
 
-        <section id="tournamentSetup" class="panel">
+        <section id="tournamentSetup" class="panel setup-panel">
+          <p class="eyebrow">SETUP</p>
           <h2>Tournament Setup</h2>
+
           <form id="tournamentForm" class="stack">
             <label>
-              Name
+              Tournament name
               <input name="name" value="Song Clash Tournament" required>
             </label>
 
@@ -85,92 +171,33 @@
               <legend>Format</legend>
               <label class="inline-option">
                 <input type="radio" name="tournamentType" value="round_robin" checked>
-                Round Robin
+                <span>
+                  <strong>Round Robin</strong>
+                  <small>Every selected song plays every other selected song.</small>
+                </span>
               </label>
+
               <label class="inline-option">
                 <input type="radio" name="tournamentType" value="double_elimination">
-                Double Elimination
+                <span>
+                  <strong>Double Elimination</strong>
+                  <small>A song is eliminated after its second loss.</small>
+                </span>
               </label>
             </fieldset>
 
             <div>
-              <h3>Select Songs</h3>
+              <div class="panel-heading">
+                <h3>Select Songs</h3>
+                <span id="selectedSongCount" class="selection-count">0 selected</span>
+              </div>
               <div id="songChoices" class="song-choices"></div>
             </div>
 
-            <button class="button primary" type="submit">Create Tournament</button>
+            <button class="button primary big" type="submit">Create Tournament</button>
           </form>
         </section>
       </div>
-
-      <section id="activeControls" class="panel hidden control-panel">
-        <div class="control-heading">
-          <div>
-            <p class="eyebrow">CURRENT TOURNAMENT</p>
-            <h2 id="currentTournamentName"></h2>
-            <p id="currentTournamentMeta" class="muted"></p>
-          </div>
-          <div class="state-pill">State: <strong id="stateLabel">setup</strong></div>
-        </div>
-
-        <div class="metric-row">
-          <div><span>Audience</span><strong id="audienceCount">0</strong></div>
-          <div><span>Votes</span><strong id="voteCount">0</strong></div>
-        </div>
-
-        <div class="matchup-grid">
-          <article class="song-card">
-            <p>SONG A</p>
-            <h3 id="songATitle">—</h3>
-            <span id="songAArtist"></span>
-            <button id="playA" class="button primary">▶ Play Song A</button>
-          </article>
-
-          <div class="vs">VS</div>
-
-          <article class="song-card">
-            <p>SONG B</p>
-            <h3 id="songBTitle">—</h3>
-            <span id="songBArtist"></span>
-            <button id="playB" class="button primary">▶ Play Song B</button>
-          </article>
-        </div>
-
-        <div class="control-groups">
-          <div>
-            <h3>Playback</h3>
-            <div class="button-row">
-              <button id="pauseAudio" class="button">Pause</button>
-              <button id="stopAudio" class="button">Stop</button>
-            </div>
-          </div>
-
-          <div>
-            <h3>Voting</h3>
-            <div class="button-row">
-              <button id="openVoting" class="button success">Open Voting</button>
-              <button id="closeVoting" class="button">Close Voting / Results</button>
-            </div>
-          </div>
-
-          <div>
-            <h3>Tournament</h3>
-            <div class="button-row">
-              <button id="startTournament" class="button primary">Start Tournament</button>
-              <button id="nextMatchup" class="button primary hidden">Next Matchup</button>
-              <button id="deleteTournament" class="button danger">Delete Setup</button>
-            </div>
-          </div>
-        </div>
-
-        <div id="tiePanel" class="tie-panel hidden">
-          <strong>The vote is tied. Choose the winner:</strong>
-          <div class="button-row">
-            <button id="tieA" class="button"></button>
-            <button id="tieB" class="button"></button>
-          </div>
-        </div>
-      </section>
     </section>
   </main>
 

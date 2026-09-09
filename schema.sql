@@ -32,6 +32,9 @@ CREATE TABLE IF NOT EXISTS tournaments (
   state TEXT NOT NULL DEFAULT 'setup'
     CHECK (state IN ('setup', 'waiting', 'song_a', 'song_b', 'voting', 'results', 'completed')),
   current_matchup_id TEXT,
+  phase_detail TEXT,
+  phase_started_at TEXT,
+  phase_ends_at TEXT,
   created_by TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   completed_at TEXT,

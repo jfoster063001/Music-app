@@ -1,243 +1,85 @@
 <!DOCTYPE html>
-
 <html lang="en">
-
 <head>
-
   <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
-
-  <title>
-    Song Clash Upload
-  </title>
-
-  <link
-    rel="stylesheet"
-    href="/styles/variables.css"
-  >
-
-  <link
-    rel="stylesheet"
-    href="/styles/global.css"
-  >
-
-  <link
-    rel="stylesheet"
-    href="/styles/upload/upload.css"
-  >
-
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Song Clash Upload</title>
+  <link rel="stylesheet" href="/styles/variables.css">
+  <link rel="stylesheet" href="/styles/global.css">
+  <link rel="stylesheet" href="/styles/upload/upload.css">
 </head>
-
-
 <body>
-
   <main class="upload-page">
+    <header class="upload-header">
+      <p class="eyebrow">PLAYER SUBMISSION</p>
+      <h1>Upload Your Song</h1>
+      <p>One upload code = one song submission.</p>
+    </header>
 
+    <section id="codeSection" class="upload-card">
+      <div class="step-badge">Step 1</div>
+      <h2>Enter your upload code</h2>
+      <p class="upload-help">Use the code the host gave you. Dashes are optional.</p>
 
-    <section
-      id="codeSection"
-      class="upload-card"
-    >
-
-      <h1>
-        Upload Your Song
-      </h1>
-
-      <p class="muted">
-        Enter the upload code
-        provided by the host.
-      </p>
-
-
-      <form
-        id="codeForm"
-      >
-
-        <label
-          for="uploadCode"
-        >
-          Upload Code
-        </label>
-
+      <form id="codeForm" class="upload-form">
+        <label for="uploadCode">Upload code</label>
         <input
           id="uploadCode"
-
           name="code"
-
           type="text"
-
           autocomplete="off"
-
           autocapitalize="characters"
-
           spellcheck="false"
-
           placeholder="ABC12-DEF34"
-
+          maxlength="11"
           required
         >
-
-
-        <button
-          type="submit"
-        >
-          Continue
-        </button>
-
+        <button class="button primary big" type="submit">Continue</button>
       </form>
-
     </section>
 
+    <section id="uploadSection" class="upload-card hidden">
+      <div class="step-badge">Step 2</div>
+      <h2>Choose your song</h2>
+      <p class="upload-help">The artist is stored for the final standings but hidden during matchups.</p>
 
+      <form id="songUploadForm" class="upload-form">
+        <label for="songTitle">Song title</label>
+        <input id="songTitle" name="title" type="text" maxlength="150" required>
 
-    <section
-      id="uploadSection"
+        <label for="songArtist">Artist</label>
+        <input id="songArtist" name="artist" type="text" maxlength="150" required>
 
-      class="upload-card hidden"
-    >
+        <label for="songFile">Audio file</label>
+        <div class="file-picker">
+          <input
+            id="songFile"
+            name="file"
+            type="file"
+            accept=".mp3,.wav,.ogg,.m4a,.aac,.flac,.webm,audio/*"
+            required
+          >
+        </div>
 
-      <h1>
-        Submit Your Song
-      </h1>
+        <div class="file-meta">
+          <span id="fileInfo">No file selected</span>
+          <span>Maximum 50 MB</span>
+        </div>
 
-      <p class="muted">
-        Your upload code allows
-        one song submission.
-      </p>
-
-
-      <form
-        id="songUploadForm"
-      >
-
-        <label
-          for="songTitle"
-        >
-          Song Title
-        </label>
-
-        <input
-          id="songTitle"
-
-          name="title"
-
-          type="text"
-
-          maxlength="150"
-
-          required
-        >
-
-
-        <label
-          for="songArtist"
-        >
-          Artist
-        </label>
-
-        <input
-          id="songArtist"
-
-          name="artist"
-
-          type="text"
-
-          maxlength="150"
-        >
-
-
-        <label
-          for="songFile"
-        >
-          Music File
-        </label>
-
-        <input
-          id="songFile"
-
-          name="file"
-
-          type="file"
-
-          accept="
-            audio/mpeg,
-            audio/wav,
-            audio/ogg,
-            audio/mp4,
-            audio/aac,
-            audio/flac,
-            audio/webm
-          "
-
-          required
-        >
-
-
-        <p
-          id="fileInfo"
-
-          class="file-info"
-        ></p>
-
-
-        <p class="muted">
-          Maximum file size:
-          50 MB
-        </p>
-
-
-        <button
-          type="submit"
-        >
-          Upload Song
-        </button>
-
+        <button class="button success big" type="submit">Submit Song</button>
       </form>
-
     </section>
 
-
-
-    <section
-      id="completeSection"
-
-      class="upload-card hidden"
-    >
-
-      <h1>
-        ✓ Song Submitted
-      </h1>
-
-      <p>
-        Your song was successfully
-        uploaded.
-      </p>
-
-      <p class="muted">
-        Thank you for participating!
-      </p>
-
+    <section id="completeSection" class="upload-card complete-card hidden">
+      <div class="complete-icon">✓</div>
+      <h2>Song submitted</h2>
+      <p>Your upload is complete and the one-time code has been consumed.</p>
+      <p class="upload-help">You can close this page.</p>
     </section>
 
-
-    <p
-      id="message"
-      class="message"
-    ></p>
-
-
+    <p id="message" class="message" aria-live="polite"></p>
   </main>
 
-
-  <script
-    type="module"
-    src="/js/upload/upload.js"
-  ></script>
-
+  <script type="module" src="/js/upload/upload.js"></script>
 </body>
-
 </html>

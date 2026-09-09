@@ -1,13 +1,32 @@
 import { getPublicState } from "./tournamentService.js";
 
-export async function joinAudience({ audienceId, displayName }, env) {
-  const tournament = await env.DB.prepare(
+async function getJoinableTournament(env) {
+  return env.DB.prepare(
     `SELECT id
      FROM tournaments
      WHERE status IN ('setup', 'active')
      ORDER BY created_at DESC
      LIMIT 1`
   ).first();
+}
+
+export async function touchAudience(audienceId, env) {
+  if (!audienceId) return false;
+
+  const tournament = await getJoinableTournament(env);
+  if (!tournament) return false;
+
+  const result = await env.DB.prepare(
+    `UPDATE audience_members
+     SET last_seen_at = CURRENT_TIMESTAMP
+     WHERE id = ? AND tournament_id = ?`
+  ).bind(audienceId, tournament.id).run();
+
+  return Number(result.meta?.changes || 0) > 0;
+}
+
+export async function joinAudience({ audienceId, displayName }, env) {
+  const tournament = await getJoinableTournament(env);
 
   if (!tournament) {
     const error = new Error("There is no tournament to join");
@@ -32,7 +51,10 @@ export async function joinAudience({ audienceId, displayName }, env) {
   return getPublicState(env, audienceId);
 }
 
-export async function submitVote({ audienceId, matchupId, selectedSongId }, env) {
+export async function submitVote(
+  { audienceId, matchupId, selectedSongId },
+  env
+) {
   const tournament = await env.DB.prepare(
     `SELECT id, state, current_matchup_id
      FROM tournaments
@@ -66,10 +88,16 @@ export async function submitVote({ audienceId, matchupId, selectedSongId }, env)
      LIMIT 1`
   ).bind(matchupId, tournament.id).first();
 
-  if (!matchup) throw new Error("Matchup not found");
+  if (!matchup) {
+    const error = new Error("Matchup not found");
+    error.status = 404;
+    throw error;
+  }
 
   if (![matchup.song_a_id, matchup.song_b_id].includes(selectedSongId)) {
-    throw new Error("Invalid song selection");
+    const error = new Error("Invalid song selection");
+    error.status = 400;
+    throw error;
   }
 
   const member = await env.DB.prepare(
@@ -106,11 +134,7 @@ export async function submitVote({ audienceId, matchupId, selectedSongId }, env)
     throw error;
   }
 
-  await env.DB.prepare(
-    `UPDATE audience_members
-     SET last_seen_at = CURRENT_TIMESTAMP
-     WHERE id = ? AND tournament_id = ?`
-  ).bind(audienceId, tournament.id).run();
+  await touchAudience(audienceId, env);
 
   return getPublicState(env, audienceId);
 }

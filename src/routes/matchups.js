@@ -11,7 +11,6 @@ export function registerMatchupRoutes(router) {
     requireSecret(request, env, {
       envKey: "HOST_SECRET",
       headerName: "x-host-secret",
-      queryName: "hostSecret",
       label: "host secret"
     });
 
@@ -22,7 +21,11 @@ export function registerMatchupRoutes(router) {
         body.tournamentId,
         request.params.id,
         body.state,
-        env
+        env,
+        {
+          phaseDetail: body.phaseDetail,
+          durationSeconds: body.durationSeconds
+        }
       )
     );
   });
@@ -31,7 +34,6 @@ export function registerMatchupRoutes(router) {
     requireSecret(request, env, {
       envKey: "HOST_SECRET",
       headerName: "x-host-secret",
-      queryName: "hostSecret",
       label: "host secret"
     });
 
@@ -51,7 +53,6 @@ export function registerMatchupRoutes(router) {
     requireSecret(request, env, {
       envKey: "HOST_SECRET",
       headerName: "x-host-secret",
-      queryName: "hostSecret",
       label: "host secret"
     });
 

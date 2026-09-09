@@ -13,7 +13,6 @@ export function registerTournamentRoutes(router) {
     requireSecret(request, env, {
       envKey: "HOST_SECRET",
       headerName: "x-host-secret",
-      queryName: "hostSecret",
       label: "host secret"
     });
 
@@ -28,18 +27,20 @@ export function registerTournamentRoutes(router) {
     requireSecret(request, env, {
       envKey: "HOST_SECRET",
       headerName: "x-host-secret",
-      queryName: "hostSecret",
       label: "host secret"
     });
 
     const body = await request.json();
 
-    const tournament = await createTournament({
-      name: body.name,
-      tournamentType: body.tournamentType,
-      songIds: body.songIds,
-      userId: null
-    }, env);
+    const tournament = await createTournament(
+      {
+        name: body.name,
+        tournamentType: body.tournamentType,
+        songIds: body.songIds,
+        userId: null
+      },
+      env
+    );
 
     return json({ tournament }, 201);
   });
@@ -48,7 +49,6 @@ export function registerTournamentRoutes(router) {
     requireSecret(request, env, {
       envKey: "HOST_SECRET",
       headerName: "x-host-secret",
-      queryName: "hostSecret",
       label: "host secret"
     });
 
@@ -59,7 +59,6 @@ export function registerTournamentRoutes(router) {
     requireSecret(request, env, {
       envKey: "HOST_SECRET",
       headerName: "x-host-secret",
-      queryName: "hostSecret",
       label: "host secret"
     });
 

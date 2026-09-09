@@ -6,14 +6,14 @@ import {
 
 import {
   createUploadCode,
-  listUploadCodes,
+  getAllUploadCodes,
   deleteUploadCode
 } from "../services/uploadCodeService.js";
 
 
 export function registerUploadCodeRoutes(router) {
 
-  /**
+  /*
    * Get all upload codes.
    *
    * Host only.
@@ -29,16 +29,14 @@ export function registerUploadCodeRoutes(router) {
         env,
         {
           envKey: "HOST_SECRET",
-
           headerName: "x-host-secret",
-
           label: "host secret"
         }
       );
 
 
       const codes =
-        await listUploadCodes(env);
+        await getAllUploadCodes(env);
 
 
       return json({
@@ -48,7 +46,7 @@ export function registerUploadCodeRoutes(router) {
   );
 
 
-  /**
+  /*
    * Create a new upload code.
    *
    * Host only.
@@ -64,22 +62,19 @@ export function registerUploadCodeRoutes(router) {
         env,
         {
           envKey: "HOST_SECRET",
-
           headerName: "x-host-secret",
-
           label: "host secret"
         }
       );
 
 
-      const code =
+      const created =
         await createUploadCode(env);
 
 
       return json(
         {
-          success: true,
-          code
+          code: created.code
         },
         201
       );
@@ -87,8 +82,8 @@ export function registerUploadCodeRoutes(router) {
   );
 
 
-  /**
-   * Delete an upload code.
+  /*
+   * Delete an unused upload code.
    *
    * Host only.
    */
@@ -103,34 +98,20 @@ export function registerUploadCodeRoutes(router) {
         env,
         {
           envKey: "HOST_SECRET",
-
           headerName: "x-host-secret",
-
           label: "host secret"
         }
       );
 
 
-      const deleted =
-        await deleteUploadCode(
-          request.params.code,
-          env
-        );
-
-
-      if (!deleted) {
-
-        return json(
-          {
-            error: "Upload code not found"
-          },
-          404
-        );
-      }
+      await deleteUploadCode(
+        request.params.code,
+        env
+      );
 
 
       return json({
-        success: true
+        ok: true
       });
     }
   );

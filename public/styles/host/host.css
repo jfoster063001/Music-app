@@ -1,157 +1,113 @@
 .host-shell {
-  width: min(1280px, calc(100% - 2rem));
+  width: min(1320px, calc(100% - 2rem));
   margin: 0 auto;
   padding: 2rem 0 5rem;
 }
 
 .login-panel {
-  width: min(460px, 100%);
+  width: min(500px, 100%);
   margin: 10vh auto 0;
 }
 
+.login-panel code {
+  color: #d7d2ff;
+}
+
 .host-header,
-.control-heading {
+.control-heading,
+.panel-heading {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
   align-items: flex-start;
 }
 
-.header-actions {
+.host-header {
+  margin-bottom: 1rem;
+}
+
+.host-header h1 {
+  margin-bottom: .35rem;
+}
+
+.header-actions,
+.primary-game-controls,
+.compact-row {
   display: flex;
   flex-wrap: wrap;
-  gap: .75rem;
+  gap: .65rem;
+}
+
+.status-message {
+  min-height: 1.5rem;
+  margin: .5rem 0 1rem;
+  color: var(--success);
+  font-weight: 700;
+}
+
+.status-message.error {
+  color: #ff9daa;
 }
 
 .host-grid {
   display: grid;
-  grid-template-columns: minmax(280px, .75fr) minmax(420px, 1.25fr);
+  grid-template-columns: minmax(340px, .85fr) minmax(480px, 1.15fr);
   gap: 1rem;
+  align-items: start;
+}
+
+.game-panel {
   margin-bottom: 1rem;
+  border-color: #4b4f8c;
+  background:
+    radial-gradient(circle at top right, rgba(111, 92, 255, .15), transparent 28rem),
+    rgba(23, 27, 49, .97);
 }
 
-.song-choices {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: .65rem;
-  max-height: 360px;
-  overflow: auto;
-}
-
-.song-choice {
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: .75rem;
-  background: #11162a;
-}
-
-.song-choice input {
-  width: auto;
-}
-
-.song-choice small {
-  display: block;
-  color: var(--muted);
-}
-
-.song-admin-list {
-  display: grid;
+.state-stack {
+  display: flex;
+  flex-wrap: wrap;
   gap: .55rem;
-  max-height: 260px;
-  margin-top: .75rem;
-  overflow: auto;
-}
-
-.song-admin-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: .75rem;
-  align-items: center;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: #11162a;
-  padding: .65rem .75rem;
-}
-
-.song-admin-row strong,
-.song-admin-row span {
-  display: block;
-}
-
-.song-admin-row span {
-  color: var(--muted);
-  font-size: .85rem;
-}
-
-.upload-code-list {
-  display: grid;
-  gap: .5rem;
-  max-height: 210px;
-  overflow: auto;
-  margin-top: .75rem;
-  margin-bottom: 1rem;
-}
-
-.upload-code-row {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  align-items: center;
-  gap: .6rem;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: #10162a;
-  padding: .55rem .7rem;
-}
-
-.upload-code-row strong,
-.upload-code-row span {
-  display: block;
-}
-
-.upload-code-row span {
-  color: var(--muted);
-  font-size: .8rem;
-}
-
-.inline-option {
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  margin-top: .6rem;
-}
-
-.inline-option input {
-  width: auto;
-}
-
-.status-message {
-  min-height: 1.4em;
-  color: var(--success);
-}
-
-.status-message.error {
-  color: var(--danger);
+  justify-content: flex-end;
 }
 
 .state-pill {
+  display: grid;
+  gap: .1rem;
+  min-width: 120px;
   border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: .6rem .9rem;
+  border-radius: 14px;
+  padding: .55rem .8rem;
   background: #10152a;
+  color: var(--muted);
+  font-size: .78rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.state-pill strong {
+  color: var(--text);
+  font-size: 1rem;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.phase-pill strong {
+  color: #d8d3ff;
 }
 
 .metric-row {
-  display: flex;
-  gap: 1rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .75rem;
   margin: 1rem 0;
 }
 
 .metric-row > div {
-  min-width: 130px;
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: .8rem 1rem;
+  background: rgba(15, 19, 38, .55);
 }
 
 .metric-row span,
@@ -161,11 +117,12 @@
 
 .metric-row span {
   color: var(--muted);
-  font-size: .85rem;
+  font-size: .82rem;
 }
 
 .metric-row strong {
-  font-size: 1.7rem;
+  margin-top: .15rem;
+  font-size: 1.55rem;
 }
 
 .matchup-grid {
@@ -176,36 +133,50 @@
 }
 
 .song-card {
-  min-height: 230px;
+  min-height: 180px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   border-radius: 18px;
   padding: 1.25rem;
   background: #11162a;
+  transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
 }
 
-.song-card .button {
-  margin-top: auto;
+.song-card p {
+  margin-bottom: .5rem;
+  color: var(--muted);
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.song-card h3 {
+  margin: 0;
+  font-size: clamp(1.5rem, 3vw, 2.35rem);
+}
+
+.song-card.active {
+  border-color: var(--accent);
+  transform: translateY(-3px);
+  box-shadow: 0 0 0 4px rgba(139, 124, 255, .12);
 }
 
 .vs {
-  font-size: 1.5rem;
-  font-weight: 900;
   color: var(--muted);
+  font-size: 1.4rem;
+  font-weight: 950;
 }
 
-.control-groups {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
+.primary-game-controls {
   margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
 }
 
-.control-groups > div {
-  border-top: 1px solid var(--border);
-  padding-top: 1rem;
+.automation-note {
+  margin: .85rem 0 0;
+  line-height: 1.5;
 }
 
 .tie-panel {
@@ -213,17 +184,166 @@
   border: 1px solid #e4bb5a;
   border-radius: 14px;
   padding: 1rem;
+  background: rgba(228, 187, 90, .08);
 }
 
-@media (max-width: 850px) {
+.tie-panel .button-row {
+  margin-top: .75rem;
+}
+
+.advanced-controls {
+  margin-top: 1rem;
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+}
+
+.advanced-controls summary {
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.advanced-controls[open] summary {
+  color: var(--text);
+  margin-bottom: .75rem;
+}
+
+.submissions-panel,
+.setup-panel {
+  min-width: 0;
+}
+
+.section-divider {
+  height: 1px;
+  margin: 1.25rem 0;
+  background: var(--border);
+}
+
+.upload-code-list,
+.song-admin-list {
+  display: grid;
+  gap: .55rem;
+  margin-top: .8rem;
+  overflow: auto;
+}
+
+.upload-code-list {
+  max-height: 280px;
+}
+
+.song-admin-list {
+  max-height: 330px;
+}
+
+.upload-code-row,
+.song-admin-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: .6rem;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: .65rem .75rem;
+  background: #10162a;
+}
+
+.song-admin-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.upload-code-row strong,
+.upload-code-row span,
+.song-admin-row strong,
+.song-admin-row span {
+  display: block;
+}
+
+.upload-code-row strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: .06em;
+}
+
+.upload-code-row span,
+.song-admin-row span {
+  color: var(--muted);
+  font-size: .8rem;
+}
+
+.upload-code-row.used {
+  opacity: .68;
+}
+
+.song-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: .65rem;
+  max-height: 420px;
+  overflow: auto;
+  padding-right: .2rem;
+}
+
+.song-choice {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: .75rem;
+  background: #11162a;
+  cursor: pointer;
+}
+
+.song-choice:has(input:checked) {
+  border-color: var(--accent);
+  background: rgba(111, 92, 255, .12);
+}
+
+.song-choice input,
+.inline-option input {
+  width: auto;
+}
+
+.song-choice small,
+.inline-option small {
+  display: block;
+  margin-top: .15rem;
+  color: var(--muted);
+}
+
+.inline-option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: .65rem;
+  margin-top: .7rem;
+}
+
+.selection-count {
+  color: var(--muted);
+  font-size: .85rem;
+}
+
+@media (max-width: 900px) {
   .host-header,
-  .control-heading {
+  .control-heading,
+  .panel-heading {
     display: grid;
   }
 
   .host-grid,
-  .control-groups {
+  .metric-row {
     grid-template-columns: 1fr;
+  }
+
+  .state-stack {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 680px) {
+  .host-shell {
+    width: min(100% - 1rem, 1320px);
+    padding-top: .75rem;
   }
 
   .matchup-grid {
@@ -232,5 +352,18 @@
 
   .vs {
     text-align: center;
+  }
+
+  .primary-game-controls .button,
+  .header-actions .button {
+    flex: 1 1 100%;
+  }
+
+  .upload-code-row {
+    grid-template-columns: 1fr auto;
+  }
+
+  .upload-code-row > div {
+    grid-column: 1 / -1;
   }
 }

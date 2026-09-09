@@ -3,6 +3,28 @@ import {
   createNextDoubleEliminationMatch
 } from "./bracketService.js";
 
+const RESULT_HOLD_SECONDS = 6;
+const ACTIVE_AUDIENCE_SECONDS = 45;
+
+function createError(message, status = 400, details = null) {
+  const error = new Error(message);
+  error.status = status;
+  if (details) error.details = details;
+  return error;
+}
+
+function phaseTiming(durationSeconds = 0) {
+  const startedAt = new Date();
+  const duration = Math.max(0, Number(durationSeconds) || 0);
+
+  return {
+    startedAt: startedAt.toISOString(),
+    endsAt: duration > 0
+      ? new Date(startedAt.getTime() + duration * 1000).toISOString()
+      : null
+  };
+}
+
 async function insertMatchups(matchups, env) {
   if (!matchups.length) return;
 
@@ -25,26 +47,48 @@ async function insertMatchups(matchups, env) {
   await env.DB.batch(statements);
 }
 
-export async function createTournament({ name, tournamentType, songIds, userId }, env) {
+export async function createTournament(
+  { name, tournamentType, songIds, userId },
+  env
+) {
   if (!["round_robin", "double_elimination"].includes(tournamentType)) {
-    throw new Error("Tournament type must be round_robin or double_elimination");
+    throw createError(
+      "Tournament type must be round_robin or double_elimination",
+      400
+    );
   }
 
   const uniqueSongIds = [...new Set(songIds || [])];
+
   if (uniqueSongIds.length < 2) {
-    throw new Error("Select at least two songs");
+    throw createError("Select at least two songs", 400);
   }
 
   const existing = await env.DB.prepare(
-    `SELECT id FROM tournaments
+    `SELECT id
+     FROM tournaments
      WHERE status IN ('setup', 'active')
      LIMIT 1`
   ).first();
 
   if (existing) {
-    const error = new Error("Finish or delete the current tournament before creating another");
-    error.status = 409;
-    throw error;
+    throw createError(
+      "Finish or delete the current tournament before creating another",
+      409
+    );
+  }
+
+  const placeholders = uniqueSongIds.map(() => "?").join(", ");
+  const songsFound = Number(
+    await env.DB.prepare(
+      `SELECT COUNT(*) AS count
+       FROM songs
+       WHERE id IN (${placeholders})`
+    ).bind(...uniqueSongIds).first("count") || 0
+  );
+
+  if (songsFound !== uniqueSongIds.length) {
+    throw createError("One or more selected songs no longer exist", 400);
   }
 
   const tournamentId = crypto.randomUUID();
@@ -124,7 +168,14 @@ export async function getCurrentTournament(env) {
 
 export async function startTournament(id, env) {
   const tournament = await getTournament(id, env);
-  if (!tournament) throw new Error("Tournament not found");
+
+  if (!tournament) {
+    throw createError("Tournament not found", 404);
+  }
+
+  if (tournament.status !== "setup") {
+    throw createError("Tournament has already been started", 409);
+  }
 
   let matchupId;
 
@@ -141,14 +192,24 @@ export async function startTournament(id, env) {
     matchupId = next.matchupId;
   }
 
-  if (!matchupId) throw new Error("No matchup is available");
+  if (!matchupId) {
+    throw createError("No matchup is available", 409);
+  }
+
+  const timing = phaseTiming();
 
   await env.DB.batch([
     env.DB.prepare(
       `UPDATE tournaments
-       SET status = 'active', state = 'waiting', current_matchup_id = ?
+       SET status = 'active',
+           state = 'waiting',
+           current_matchup_id = ?,
+           phase_detail = 'ready',
+           phase_started_at = ?,
+           phase_ends_at = NULL
        WHERE id = ?`
-    ).bind(matchupId, id),
+    ).bind(matchupId, timing.startedAt, id),
+
     env.DB.prepare(
       "UPDATE matchups SET status = 'active' WHERE id = ?"
     ).bind(matchupId)
@@ -157,26 +218,51 @@ export async function startTournament(id, env) {
   return getPublicState(env);
 }
 
-export async function setTournamentState(tournamentId, matchupId, state, env) {
+export async function setTournamentState(
+  tournamentId,
+  matchupId,
+  state,
+  env,
+  options = {}
+) {
   const allowed = ["waiting", "song_a", "song_b", "voting", "results"];
-  if (!allowed.includes(state)) throw new Error("Invalid tournament state");
+
+  if (!allowed.includes(state)) {
+    throw createError("Invalid tournament state", 400);
+  }
 
   const tournament = await env.DB.prepare(
     `SELECT id, current_matchup_id, status
-     FROM tournaments WHERE id = ? LIMIT 1`
+     FROM tournaments
+     WHERE id = ?
+     LIMIT 1`
   ).bind(tournamentId).first();
 
   if (!tournament || tournament.status !== "active") {
-    throw new Error("Tournament is not active");
+    throw createError("Tournament is not active", 409);
   }
 
   if (tournament.current_matchup_id !== matchupId) {
-    throw new Error("That is not the current matchup");
+    throw createError("That is not the current matchup", 409);
   }
 
+  const timing = phaseTiming(options.durationSeconds);
+  const phaseDetail = String(options.phaseDetail || state).slice(0, 64);
+
   await env.DB.prepare(
-    "UPDATE tournaments SET state = ? WHERE id = ?"
-  ).bind(state, tournamentId).run();
+    `UPDATE tournaments
+     SET state = ?,
+         phase_detail = ?,
+         phase_started_at = ?,
+         phase_ends_at = ?
+     WHERE id = ?`
+  ).bind(
+    state,
+    phaseDetail,
+    timing.startedAt,
+    timing.endsAt,
+    tournamentId
+  ).run();
 
   return getPublicState(env);
 }
@@ -202,28 +288,40 @@ export async function getCurrentMatchup(tournamentId, matchupId, env) {
   ).bind(tournamentId, matchupId).first();
 }
 
-export async function completeCurrentMatchup(tournamentId, matchupId, forcedWinnerId, env) {
+export async function completeCurrentMatchup(
+  tournamentId,
+  matchupId,
+  forcedWinnerId,
+  env
+) {
   const tournament = await env.DB.prepare(
     `SELECT id, tournament_type, current_matchup_id, state
-     FROM tournaments WHERE id = ? LIMIT 1`
+     FROM tournaments
+     WHERE id = ?
+     LIMIT 1`
   ).bind(tournamentId).first();
 
   if (!tournament || tournament.current_matchup_id !== matchupId) {
-    throw new Error("That is not the current matchup");
+    throw createError("That is not the current matchup", 409);
   }
 
   if (tournament.state !== "voting") {
-    const error = new Error("Voting is not currently open for this matchup");
-    error.status = 409;
-    throw error;
+    throw createError(
+      "Voting is not currently open for this matchup",
+      409
+    );
   }
 
   const matchup = await env.DB.prepare(
-    `SELECT * FROM matchups
-     WHERE id = ? AND tournament_id = ? LIMIT 1`
+    `SELECT *
+     FROM matchups
+     WHERE id = ? AND tournament_id = ?
+     LIMIT 1`
   ).bind(matchupId, tournamentId).first();
 
-  if (!matchup) throw new Error("Matchup not found");
+  if (!matchup) {
+    throw createError("Matchup not found", 404);
+  }
 
   const results = await env.DB.prepare(
     `SELECT selected_song_id, COUNT(*) AS votes
@@ -244,37 +342,44 @@ export async function completeCurrentMatchup(tournamentId, matchupId, forcedWinn
   let winnerId = forcedWinnerId;
 
   if (!winnerId) {
-    const a = counts[matchup.song_a_id];
-    const b = counts[matchup.song_b_id];
+    const aVotes = counts[matchup.song_a_id];
+    const bVotes = counts[matchup.song_b_id];
 
-    if (a === b) {
-      const error = new Error("Voting is tied. The host must choose the tie winner.");
-      error.status = 409;
-      error.details = {
-        tie: true,
-        songAId: matchup.song_a_id,
-        songBId: matchup.song_b_id,
-        songAVotes: a,
-        songBVotes: b
-      };
-      throw error;
+    if (aVotes === bVotes) {
+      throw createError(
+        "Voting is tied. The host must choose the tie winner.",
+        409,
+        {
+          tie: true,
+          songAId: matchup.song_a_id,
+          songBId: matchup.song_b_id,
+          songAVotes: aVotes,
+          songBVotes: bVotes
+        }
+      );
     }
 
-    winnerId = a > b ? matchup.song_a_id : matchup.song_b_id;
+    winnerId = aVotes > bVotes
+      ? matchup.song_a_id
+      : matchup.song_b_id;
   }
 
   if (![matchup.song_a_id, matchup.song_b_id].includes(winnerId)) {
-    throw new Error("Winner must be one of the songs in this matchup");
+    throw createError("Winner must be one of the songs in this matchup", 400);
   }
 
   const loserId = winnerId === matchup.song_a_id
     ? matchup.song_b_id
     : matchup.song_a_id;
 
+  const timing = phaseTiming(RESULT_HOLD_SECONDS);
+
   await env.DB.batch([
     env.DB.prepare(
       `UPDATE matchups
-       SET winner_song_id = ?, status = 'completed', completed_at = CURRENT_TIMESTAMP
+       SET winner_song_id = ?,
+           status = 'completed',
+           completed_at = CURRENT_TIMESTAMP
        WHERE id = ?`
     ).bind(winnerId, matchupId),
 
@@ -286,18 +391,22 @@ export async function completeCurrentMatchup(tournamentId, matchupId, forcedWinn
 
     env.DB.prepare(
       `UPDATE tournament_songs
-       SET
-         losses = losses + 1,
-         eliminated = CASE
-           WHEN ? = 'double_elimination' AND losses + 1 >= 2 THEN 1
-           ELSE eliminated
-         END
+       SET losses = losses + 1,
+           eliminated = CASE
+             WHEN ? = 'double_elimination' AND losses + 1 >= 2 THEN 1
+             ELSE eliminated
+           END
        WHERE tournament_id = ? AND song_id = ?`
     ).bind(tournament.tournament_type, tournamentId, loserId),
 
     env.DB.prepare(
-      "UPDATE tournaments SET state = 'results' WHERE id = ?"
-    ).bind(tournamentId)
+      `UPDATE tournaments
+       SET state = 'results',
+           phase_detail = 'results',
+           phase_started_at = ?,
+           phase_ends_at = ?
+       WHERE id = ?`
+    ).bind(timing.startedAt, timing.endsAt, tournamentId)
   ]);
 
   return getPublicState(env);
@@ -305,13 +414,19 @@ export async function completeCurrentMatchup(tournamentId, matchupId, forcedWinn
 
 export async function advanceTournament(tournamentId, env) {
   const tournament = await env.DB.prepare(
-    `SELECT id, tournament_type, current_matchup_id
+    `SELECT id, tournament_type, current_matchup_id, state
      FROM tournaments
      WHERE id = ? AND status = 'active'
      LIMIT 1`
   ).bind(tournamentId).first();
 
-  if (!tournament) throw new Error("No active tournament");
+  if (!tournament) {
+    throw createError("No active tournament", 409);
+  }
+
+  if (tournament.state !== "results") {
+    throw createError("Current matchup results have not been finalized", 409);
+  }
 
   let nextMatchupId = null;
 
@@ -339,12 +454,18 @@ export async function advanceTournament(tournamentId, env) {
     return getPublicState(env);
   }
 
+  const timing = phaseTiming();
+
   await env.DB.batch([
     env.DB.prepare(
       `UPDATE tournaments
-       SET current_matchup_id = ?, state = 'waiting'
+       SET current_matchup_id = ?,
+           state = 'waiting',
+           phase_detail = 'ready',
+           phase_started_at = ?,
+           phase_ends_at = NULL
        WHERE id = ?`
-    ).bind(nextMatchupId, tournamentId),
+    ).bind(nextMatchupId, timing.startedAt, tournamentId),
 
     env.DB.prepare(
       "UPDATE matchups SET status = 'active' WHERE id = ?"
@@ -360,15 +481,23 @@ export async function finishTournament(tournamentId, env) {
      SET status = 'completed',
          state = 'completed',
          current_matchup_id = NULL,
+         phase_detail = 'completed',
+         phase_started_at = CURRENT_TIMESTAMP,
+         phase_ends_at = NULL,
          completed_at = CURRENT_TIMESTAMP
      WHERE id = ?`
   ).bind(tournamentId).run();
 }
 
 export async function deleteCurrentTournament(tournamentId, env) {
-  await env.DB.prepare(
-    "DELETE FROM tournaments WHERE id = ? AND status != 'completed'"
+  const result = await env.DB.prepare(
+    `DELETE FROM tournaments
+     WHERE id = ? AND status != 'completed'`
   ).bind(tournamentId).run();
+
+  if (Number(result.meta?.changes || 0) === 0) {
+    throw createError("Tournament not found or already completed", 404);
+  }
 }
 
 export async function getStandings(tournamentId, env) {
@@ -389,8 +518,23 @@ export async function getStandings(tournamentId, env) {
   return result.results || [];
 }
 
+function publicTournament(tournament) {
+  return {
+    id: tournament.id,
+    name: tournament.name,
+    tournamentType: tournament.tournament_type,
+    status: tournament.status,
+    state: tournament.state,
+    phaseDetail: tournament.phase_detail || null,
+    phaseStartedAt: tournament.phase_started_at || null,
+    phaseEndsAt: tournament.phase_ends_at || null
+  };
+}
+
 export async function getPublicState(env, audienceId = null) {
-  const tournament = await env.DB.prepare(
+  const serverNow = new Date().toISOString();
+
+  let tournament = await env.DB.prepare(
     `SELECT *
      FROM tournaments
      WHERE status IN ('setup', 'active')
@@ -399,7 +543,7 @@ export async function getPublicState(env, audienceId = null) {
   ).first();
 
   if (!tournament) {
-    const completed = await env.DB.prepare(
+    tournament = await env.DB.prepare(
       `SELECT *
        FROM tournaments
        WHERE status = 'completed'
@@ -407,12 +551,30 @@ export async function getPublicState(env, audienceId = null) {
        LIMIT 1`
     ).first();
 
-    if (!completed) return { tournament: null, matchup: null };
+    if (!tournament) {
+      return {
+        serverNow,
+        tournament: null,
+        matchup: null,
+        audienceCount: 0,
+        votesSubmitted: 0,
+        viewerJoined: false,
+        viewerVoted: false,
+        voteCounts: null,
+        standings: null
+      };
+    }
 
     return {
-      tournament: completed,
+      serverNow,
+      tournament: publicTournament(tournament),
       matchup: null,
-      standings: await getStandings(completed.id, env)
+      audienceCount: 0,
+      votesSubmitted: 0,
+      viewerJoined: false,
+      viewerVoted: false,
+      voteCounts: null,
+      standings: await getStandings(tournament.id, env)
     };
   }
 
@@ -424,22 +586,45 @@ export async function getPublicState(env, audienceId = null) {
       )
     : null;
 
+  const audienceCount = Number(
+    await env.DB.prepare(
+      `SELECT COUNT(*) AS count
+       FROM audience_members
+       WHERE tournament_id = ?
+         AND last_seen_at >= datetime('now', '-${ACTIVE_AUDIENCE_SECONDS} seconds')`
+    ).bind(tournament.id).first("count") || 0
+  );
+
+  let viewerJoined = false;
   let votesSubmitted = 0;
-  let audienceCount = 0;
   let viewerVoted = false;
   let voteCounts = null;
+
+  if (audienceId) {
+    viewerJoined = Boolean(
+      await env.DB.prepare(
+        `SELECT id
+         FROM audience_members
+         WHERE id = ? AND tournament_id = ?
+         LIMIT 1`
+      ).bind(audienceId, tournament.id).first()
+    );
+  }
 
   if (matchup) {
     votesSubmitted = Number(
       await env.DB.prepare(
-        "SELECT COUNT(*) AS count FROM votes WHERE matchup_id = ?"
+        `SELECT COUNT(*) AS count
+         FROM votes
+         WHERE matchup_id = ?`
       ).bind(matchup.id).first("count") || 0
     );
 
     if (audienceId) {
       viewerVoted = Boolean(
         await env.DB.prepare(
-          `SELECT id FROM votes
+          `SELECT id
+           FROM votes
            WHERE matchup_id = ? AND audience_id = ?
            LIMIT 1`
         ).bind(matchup.id, audienceId).first()
@@ -469,22 +654,9 @@ export async function getPublicState(env, audienceId = null) {
     }
   }
 
-  audienceCount = Number(
-    await env.DB.prepare(
-      `SELECT COUNT(*) AS count
-       FROM audience_members
-       WHERE tournament_id = ?`
-    ).bind(tournament.id).first("count") || 0
-  );
-
   return {
-    tournament: {
-      id: tournament.id,
-      name: tournament.name,
-      tournamentType: tournament.tournament_type,
-      status: tournament.status,
-      state: tournament.state
-    },
+    serverNow,
+    tournament: publicTournament(tournament),
     matchup: matchup ? {
       id: matchup.id,
       roundNumber: matchup.round_number,
@@ -504,10 +676,9 @@ export async function getPublicState(env, audienceId = null) {
     } : null,
     audienceCount,
     votesSubmitted,
+    viewerJoined,
     viewerVoted,
     voteCounts,
-    standings: tournament.state === "results"
-      ? await getStandings(tournament.id, env)
-      : undefined
+    standings: null
   };
 }

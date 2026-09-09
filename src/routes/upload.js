@@ -1,9 +1,5 @@
 import { json } from "../utils/response.js";
-
-import {
-  uploadSong
-} from "../services/songService.js";
-
+import { uploadSong } from "../services/songService.js";
 import {
   normalizeCode,
   requireUnusedUploadCode,
@@ -12,262 +8,138 @@ import {
   finalizeReservedUploadCode
 } from "../services/uploadCodeService.js";
 
-
-const UPLOAD_COOKIE =
-  "song_clash_upload_code";
-
+const UPLOAD_COOKIE = "song_clash_upload_code";
 
 function getCookie(request, name) {
-  const cookie =
-    request.headers.get("Cookie");
-
-  if (!cookie) {
-    return null;
-  }
+  const cookie = request.headers.get("Cookie");
+  if (!cookie) return null;
 
   const match = cookie.match(
-    new RegExp(
-      `(?:^|;\\s*)${name}=([^;]*)`
-    )
+    new RegExp(`(?:^|;\\s*)${name}=([^;]*)`)
   );
 
-  return match
-    ? decodeURIComponent(match[1])
-    : null;
+  return match ? decodeURIComponent(match[1]) : null;
 }
 
+function createUploadCookie(request, code) {
+  const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
 
-function createUploadCookie(
-  request,
-  code
-) {
-  const isHttps =
-    new URL(request.url)
-      .protocol === "https:";
-
-  return [
-    `${UPLOAD_COOKIE}=${encodeURIComponent(code)}`,
-    "HttpOnly",
-    "SameSite=Lax",
-    "Path=/",
-    "Max-Age=21600",
-
-    ...(isHttps
-      ? ["Secure"]
-      : [])
-  ].join("; ");
+  return `${UPLOAD_COOKIE}=${encodeURIComponent(code)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=21600${secure}`;
 }
-
 
 function clearUploadCookie(request) {
-  const isHttps =
-    new URL(request.url)
-      .protocol === "https:";
+  const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
 
-  return [
-    `${UPLOAD_COOKIE}=`,
-    "HttpOnly",
-    "SameSite=Lax",
-    "Path=/",
-    "Max-Age=0",
-
-    ...(isHttps
-      ? ["Secure"]
-      : [])
-  ].join("; ");
+  return `${UPLOAD_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secure}`;
 }
 
+function readUploadCode(request) {
+  return normalizeCode(getCookie(request, UPLOAD_COOKIE));
+}
 
 export function registerUploadRoutes(router) {
+  router.get("/api/upload/session", async (request, env) => {
+    const code = readUploadCode(request);
 
-  /**
-   * Validate an upload code.
-   *
-   * POST /api/upload/access
-   */
+    if (!code) {
+      return json({ active: false, used: false });
+    }
 
-  router.post(
-    "/api/upload/access",
-
-    async (request, env) => {
-
-      const body =
-        await request.json();
-
-      const code =
-        normalizeCode(body.code);
-
-
-      if (!code) {
+    try {
+      await requireUnusedUploadCode(code, env);
+      return json({ active: true, used: false });
+    } catch (error) {
+      if (error.status === 409) {
         return json(
-          {
-            error:
-              "Upload code is required"
-          },
-          400
+          { active: false, used: true },
+          200,
+          { "Set-Cookie": clearUploadCookie(request) }
         );
       }
 
+      if (error.status === 403) {
+        return json(
+          { active: false, used: false },
+          200,
+          { "Set-Cookie": clearUploadCookie(request) }
+        );
+      }
 
-      await requireUnusedUploadCode(
-        code,
-        env
+      throw error;
+    }
+  });
+
+  router.post("/api/upload/access", async (request, env) => {
+    const body = await request.json();
+    const code = normalizeCode(body.code);
+
+    if (!code) {
+      return json({ error: "Upload code is required" }, 400);
+    }
+
+    await requireUnusedUploadCode(code, env);
+
+    return json(
+      { ok: true },
+      200,
+      { "Set-Cookie": createUploadCookie(request, code) }
+    );
+  });
+
+  router.post("/api/upload/submit", async (request, env) => {
+    const uploadCode = readUploadCode(request);
+
+    if (!uploadCode) {
+      return json(
+        { error: "Upload access expired. Enter your upload code again." },
+        401
       );
+    }
 
+    await requireUnusedUploadCode(uploadCode, env);
 
-      return new Response(
-        JSON.stringify({
-          success: true
-        }),
+    const formData = await request.formData();
+    const title = String(formData.get("title") || "").trim();
+    const artist = String(formData.get("artist") || "").trim();
+    const file = formData.get("file");
 
+    if (!title || !artist || !file) {
+      return json(
+        { error: "Song title, artist name, and audio file are required" },
+        400
+      );
+    }
+
+    await reserveUploadCode(uploadCode, env);
+
+    let song;
+
+    try {
+      song = await uploadSong(
         {
-          headers: {
-            "Content-Type":
-              "application/json",
+          title,
+          artist,
+          file
+        },
+        env
+      );
 
-            "Set-Cookie":
-              createUploadCookie(
-                request,
-                code
-              )
-          }
+      await finalizeReservedUploadCode(uploadCode, song.id, env);
+    } catch (error) {
+      await releaseReservedUploadCode(uploadCode, env);
+      throw error;
+    }
+
+    return json(
+      {
+        ok: true,
+        song: {
+          id: song.id,
+          title: song.title
         }
-      );
-    }
-  );
-
-
-  /**
-   * Upload a song.
-   *
-   * POST /api/upload/submit
-   */
-
-  router.post(
-    "/api/upload/submit",
-
-    async (request, env) => {
-
-      const uploadCode =
-        getCookie(
-          request,
-          UPLOAD_COOKIE
-        );
-
-
-      if (!uploadCode) {
-        return json(
-          {
-            error:
-              "Upload authorization expired"
-          },
-          403
-        );
-      }
-
-
-      await requireUnusedUploadCode(
-        uploadCode,
-        env
-      );
-
-
-      /*
-       * Reserve the upload code before
-       * processing the upload.
-       *
-       * This prevents two simultaneous
-       * uploads from using the same code.
-       */
-
-      await reserveUploadCode(
-        uploadCode,
-        env
-      );
-
-
-      try {
-
-        const formData =
-          await request.formData();
-
-
-        const file =
-          formData.get("file");
-
-
-        const title =
-          String(
-            formData.get("title") || ""
-          ).trim();
-
-
-        const artist =
-          String(
-            formData.get("artist") || ""
-          ).trim();
-
-
-        const song =
-          await uploadSong(
-            {
-              title,
-              artist,
-              file
-            },
-            env
-          );
-
-
-        /*
-         * Permanently consume
-         * the upload code.
-         */
-
-        await finalizeReservedUploadCode(
-          uploadCode,
-          song.id,
-          env
-        );
-
-
-        return new Response(
-          JSON.stringify({
-            success: true,
-
-            song: {
-              id: song.id,
-              title: song.title
-            }
-          }),
-
-          {
-            headers: {
-              "Content-Type":
-                "application/json",
-
-              "Set-Cookie":
-                clearUploadCookie(
-                  request
-                )
-            }
-          }
-        );
-
-      } catch (error) {
-
-        /*
-         * Release the reservation so
-         * the user can try again.
-         */
-
-        await releaseReservedUploadCode(
-          uploadCode,
-          env
-        );
-
-        throw error;
-      }
-    }
-  );
+      },
+      201,
+      { "Set-Cookie": clearUploadCookie(request) }
+    );
+  });
 }

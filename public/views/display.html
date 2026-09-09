@@ -10,30 +10,72 @@
 </head>
 <body>
   <main class="display-shell">
-    <header>
+    <header class="display-header">
       <p class="eyebrow">LIVE MUSIC TOURNAMENT</p>
       <h1 id="tournamentName">SONG CLASH</h1>
       <p id="stateText" class="display-state">Waiting…</p>
     </header>
 
-    <section class="display-matchup">
-      <article>
+    <section id="countdownPanel" class="countdown-panel hidden" aria-live="polite">
+      <p id="countdownLabel">GET READY</p>
+      <strong id="countdownValue">3</strong>
+    </section>
+
+    <section id="matchupPanel" class="display-matchup">
+      <article id="displaySongACard" class="display-song-card">
         <p>SONG A</p>
         <h2 id="songA">—</h2>
-        <span id="artistA"></span>
       </article>
 
       <div class="display-vs">VS</div>
 
-      <article>
+      <article id="displaySongBCard" class="display-song-card">
         <p>SONG B</p>
         <h2 id="songB">—</h2>
-        <span id="artistB"></span>
       </article>
     </section>
 
+    <section id="votingBanner" class="voting-banner hidden">
+      <div>
+        <p class="eyebrow">VOTING OPEN</p>
+        <h2>Vote now</h2>
+      </div>
+      <strong id="votingTimer">30</strong>
+    </section>
+
     <p id="voteProgress" class="vote-progress"></p>
-    <section id="results" class="display-results hidden"></section>
+
+    <section id="resultsPanel" class="results-panel hidden">
+      <p class="eyebrow">RESULTS</p>
+      <h2>Votes are in</h2>
+
+      <div class="result-grid">
+        <article class="result-card">
+          <h3 id="resultATitle">Song A</h3>
+          <div class="result-track">
+            <div id="resultABar" class="result-bar"></div>
+          </div>
+          <div class="result-numbers">
+            <strong id="resultACount">0</strong>
+            <span id="resultAPercent">0%</span>
+          </div>
+        </article>
+
+        <article class="result-card">
+          <h3 id="resultBTitle">Song B</h3>
+          <div class="result-track">
+            <div id="resultBBar" class="result-bar"></div>
+          </div>
+          <div class="result-numbers">
+            <strong id="resultBCount">0</strong>
+            <span id="resultBPercent">0%</span>
+          </div>
+        </article>
+      </div>
+
+      <p id="resultWinner" class="result-winner"></p>
+    </section>
+
     <section id="standings" class="standings"></section>
 
     <footer>
