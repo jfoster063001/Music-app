@@ -5,7 +5,7 @@ import { registerMatchupRoutes } from "./routes/matchups.js";
 import { registerSongRoutes } from "./routes/songs.js";
 import { registerTournamentRoutes } from "./routes/tournaments.js";
 import { registerUploadRoutes } from "./routes/upload.js";
-import { registerUploadCodeRoutes } from "./routes/uploadCodes.js";
+import { registerUploadCodeRoutes } from "./routes/uploadcodes.js";
 import { registerUserRoutes } from "./routes/users.js";
 import { registerVotingRoutes } from "./routes/voting.js";
 
