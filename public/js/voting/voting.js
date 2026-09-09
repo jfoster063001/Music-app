@@ -49,11 +49,23 @@ function updateState(nextState) {
 function votingPollInterval() {
   const phase = state?.tournament?.state;
 
-  if (!state?.tournament) return 2500;
-  if (phase === "voting") return 700;
-  if (phase === "results") return 900;
-  if (state.tournament.phaseDetail?.startsWith("countdown_")) return 700;
-  return 1600;
+  if (!state?.tournament) return 5000;
+
+  if (phase === "voting") {
+    return 2000;
+  }
+
+  if (phase === "results") {
+    return 2500;
+  }
+
+  if (
+    state.tournament.phaseDetail?.startsWith("countdown_")
+  ) {
+    return 2000;
+  }
+
+  return 5000;
 }
 
 function phaseRemainingMs() {

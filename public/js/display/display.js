@@ -45,9 +45,15 @@ async function refresh() {
 function displayPollInterval() {
   const phase = latestState?.tournament?.state;
 
-  if (phase === "voting" || phase === "results") return 650;
-  if (latestState?.tournament?.phaseDetail?.startsWith("countdown_")) return 650;
-  return 1400;
+  if (phase === "voting" || phase === "results") return 2000;
+
+  if (
+    latestState?.tournament?.phaseDetail?.startsWith("countdown_")
+  ) {
+    return 2000;
+  }
+
+  return 5000;
 }
 
 function phaseRemainingMs() {

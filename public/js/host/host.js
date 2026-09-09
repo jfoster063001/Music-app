@@ -14,7 +14,7 @@ const HOST_SECRET_KEY = "songClashHostSecret";
 const COUNTDOWN_SECONDS = 3;
 const VOTING_SECONDS = 30;
 const BETWEEN_SONG_MS = 900;
-const VOTING_POLL_MS = 500;
+const VOTING_POLL_MS = 1500;
 
 const accessPanel = document.querySelector("#accessPanel");
 const accessForm = document.querySelector("#accessForm");
@@ -293,17 +293,22 @@ async function unlockHost(secret) {
 
 function hostPollInterval() {
   const phase = state?.tournament?.state;
-  return phase === "voting" || phase === "results" ? 750 : 1400;
+
+  if (phase === "voting" || phase === "results") {
+    return 1500;
+  }
+
+  return 3000;
 }
 
 function startHostPolling() {
   if (stopPolling) stopPolling();
 
-  stopPolling = startPolling(refreshState, {
-    interval: hostPollInterval,
-    hiddenInterval: 5000,
-    pauseWhenHidden: false
-  });
+ stopPolling = startPolling(refreshState, {
+  interval: hostPollInterval,
+  hiddenInterval: 10000,
+  pauseWhenHidden: false
+});
 }
 
 function pauseAutomation(message = "Automatic game paused.") {
