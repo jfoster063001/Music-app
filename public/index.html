@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Song Clash</title>
+  <link rel="stylesheet" href="/styles/variables.css">
+  <link rel="stylesheet" href="/styles/global.css">
+</head>
+<body>
+  <main class="landing">
+    <section class="hero-card">
+      <p class="eyebrow">LIVE MUSIC TOURNAMENT</p>
+      <h1>Song Clash</h1>
+      <p>Put songs head-to-head and let the audience decide the winner.</p>
+
+      <div class="landing-actions">
+        <a class="button" href="/upload">Player Upload</a>
+        <a class="button primary" href="/voting">Audience Voting</a>
+        <a class="button" href="/display">Presentation Display</a>
+        <a class="button" href="/host">Host Controls</a>
+      </div>
+
+      <section class="song-board" aria-live="polite">
+        <h2>Uploaded songs</h2>
+        <p class="muted">Song titles are public. Artists are revealed after the tournament ends.</p>
+        <div id="publicSongList" class="public-song-list"></div>
+      </section>
+    </section>
+  </main>
+
+  <script type="module" src="/js/landing.js"></script>
+</body>
+</html>

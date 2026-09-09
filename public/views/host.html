@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Song Clash Host</title>
+  <link rel="stylesheet" href="/styles/variables.css">
+  <link rel="stylesheet" href="/styles/global.css">
+  <link rel="stylesheet" href="/styles/host/host.css">
+</head>
+<body>
+  <main class="host-shell">
+    <section id="accessPanel" class="panel login-panel">
+      <h1>Host Access</h1>
+      <p class="muted">Enter the host admin secret to unlock tournament controls.</p>
+      <form id="accessForm" class="stack">
+        <label>
+          Host secret
+          <input id="hostSecretInput" name="hostSecret" type="password" autocomplete="off" required>
+        </label>
+        <button class="button primary" type="submit">Unlock Host Controls</button>
+      </form>
+    </section>
+
+    <section id="hostApp" class="hidden">
+      <header class="host-header">
+        <div>
+          <p class="eyebrow">CONTROL CENTER</p>
+          <h1>Song Clash Host</h1>
+          <p class="muted">Single-operator host mode</p>
+        </div>
+        <div class="header-actions">
+          <a class="button" href="/upload" target="_blank">Open Upload Page</a>
+          <a class="button" href="/display" target="_blank">Open Display</a>
+          <a class="button" href="/voting" target="_blank">Open Voting</a>
+          <button id="lockHostButton" class="button danger">Lock Host</button>
+        </div>
+      </header>
+
+      <p id="statusMessage" class="status-message"></p>
+
+      <div class="host-grid">
+        <section class="panel">
+          <h2>Song Library</h2>
+          <form id="uploadForm" class="stack">
+            <label>
+              Upload secret
+              <input id="uploadSecretInput" name="uploadSecret" type="password" autocomplete="off" required>
+            </label>
+            <input name="title" placeholder="Song title" required>
+            <input name="artist" placeholder="Artist">
+            <input name="file" type="file" accept="audio/*" required>
+            <button class="button" type="submit">Upload Song</button>
+          </form>
+
+          <h3>Player upload codes</h3>
+          <p class="muted">Each code can be used to upload one song one time on the player upload page.</p>
+          <form id="uploadCodeForm" class="stack">
+            <label>
+              Create code (optional, leave blank to auto-generate)
+              <input id="uploadCodeInput" name="code" placeholder="Example: PLAYER07">
+            </label>
+            <button class="button" type="submit">Create Upload Code</button>
+          </form>
+          <div class="button-row">
+            <button id="refreshUploadCodes" class="button" type="button">Refresh Code Status</button>
+            <button id="exportUploadCodesCsv" class="button" type="button">Export Codes CSV</button>
+          </div>
+          <div id="uploadCodeList" class="upload-code-list"></div>
+
+          <h3>All uploaded songs</h3>
+          <p class="muted">Artists are visible here for duplicate cleanup. Public pages only show song titles.</p>
+          <div id="songAdminList" class="song-admin-list"></div>
+        </section>
+
+        <section id="tournamentSetup" class="panel">
+          <h2>Tournament Setup</h2>
+          <form id="tournamentForm" class="stack">
+            <label>
+              Name
+              <input name="name" value="Song Clash Tournament" required>
+            </label>
+
+            <fieldset>
+              <legend>Format</legend>
+              <label class="inline-option">
+                <input type="radio" name="tournamentType" value="round_robin" checked>
+                Round Robin
+              </label>
+              <label class="inline-option">
+                <input type="radio" name="tournamentType" value="double_elimination">
+                Double Elimination
+              </label>
+            </fieldset>
+
+            <div>
+              <h3>Select Songs</h3>
+              <div id="songChoices" class="song-choices"></div>
+            </div>
+
+            <button class="button primary" type="submit">Create Tournament</button>
+          </form>
+        </section>
+      </div>
+
+      <section id="activeControls" class="panel hidden control-panel">
+        <div class="control-heading">
+          <div>
+            <p class="eyebrow">CURRENT TOURNAMENT</p>
+            <h2 id="currentTournamentName"></h2>
+            <p id="currentTournamentMeta" class="muted"></p>
+          </div>
+          <div class="state-pill">State: <strong id="stateLabel">setup</strong></div>
+        </div>
+
+        <div class="metric-row">
+          <div><span>Audience</span><strong id="audienceCount">0</strong></div>
+          <div><span>Votes</span><strong id="voteCount">0</strong></div>
+        </div>
+
+        <div class="matchup-grid">
+          <article class="song-card">
+            <p>SONG A</p>
+            <h3 id="songATitle">—</h3>
+            <span id="songAArtist"></span>
+            <button id="playA" class="button primary">▶ Play Song A</button>
+          </article>
+
+          <div class="vs">VS</div>
+
+          <article class="song-card">
+            <p>SONG B</p>
+            <h3 id="songBTitle">—</h3>
+            <span id="songBArtist"></span>
+            <button id="playB" class="button primary">▶ Play Song B</button>
+          </article>
+        </div>
+
+        <div class="control-groups">
+          <div>
+            <h3>Playback</h3>
+            <div class="button-row">
+              <button id="pauseAudio" class="button">Pause</button>
+              <button id="stopAudio" class="button">Stop</button>
+            </div>
+          </div>
+
+          <div>
+            <h3>Voting</h3>
+            <div class="button-row">
+              <button id="openVoting" class="button success">Open Voting</button>
+              <button id="closeVoting" class="button">Close Voting / Results</button>
+            </div>
+          </div>
+
+          <div>
+            <h3>Tournament</h3>
+            <div class="button-row">
+              <button id="startTournament" class="button primary">Start Tournament</button>
+              <button id="nextMatchup" class="button primary hidden">Next Matchup</button>
+              <button id="deleteTournament" class="button danger">Delete Setup</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="tiePanel" class="tie-panel hidden">
+          <strong>The vote is tied. Choose the winner:</strong>
+          <div class="button-row">
+            <button id="tieA" class="button"></button>
+            <button id="tieB" class="button"></button>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script type="module" src="/js/host/host.js"></script>
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Song Clash Voting</title>
+  <link rel="stylesheet" href="/styles/variables.css">
+  <link rel="stylesheet" href="/styles/global.css">
+  <link rel="stylesheet" href="/styles/voting/voting.css">
+</head>
+<body>
+  <main class="voting-shell">
+    <header class="voting-header">
+      <p class="eyebrow">AUDIENCE</p>
+      <h1>Song Clash</h1>
+    </header>
+
+    <section id="noTournamentScreen" class="vote-panel hidden">
+      <h2>No tournament is active</h2>
+      <p>Keep this page open. It will update when the host starts one.</p>
+    </section>
+
+    <section id="joinScreen" class="vote-panel hidden">
+      <h2>Join the audience</h2>
+      <form id="joinForm" class="stack">
+        <input name="displayName" placeholder="Your name (optional)" maxlength="40">
+        <button class="button primary big" type="submit">Join</button>
+      </form>
+    </section>
+
+    <section id="waitingScreen" class="vote-panel hidden">
+      <h2 id="waitingMessage">Waiting for the host…</h2>
+      <div class="pulse"></div>
+    </section>
+
+    <section id="votingScreen" class="hidden">
+      <h2>Which song did you like more?</h2>
+      <p id="liveVoteCount" class="live-vote-count"></p>
+      <div class="vote-options">
+        <button id="songAButton" class="vote-button"></button>
+        <div class="vote-vs">VS</div>
+        <button id="songBButton" class="vote-button"></button>
+      </div>
+    </section>
+
+    <section id="resultScreen" class="vote-panel hidden">
+      <p class="eyebrow">WINNER</p>
+      <h2 id="winnerName">Results are in!</h2>
+      <p>Waiting for the next matchup.</p>
+    </section>
+
+    <p id="votingMessage" class="voting-message"></p>
+  </main>
+
+  <script type="module" src="/js/voting/voting.js"></script>
+</body>
+</html>

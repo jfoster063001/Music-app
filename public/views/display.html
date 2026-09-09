@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Song Clash Display</title>
+  <link rel="stylesheet" href="/styles/variables.css">
+  <link rel="stylesheet" href="/styles/global.css">
+  <link rel="stylesheet" href="/styles/display/display.css">
+</head>
+<body>
+  <main class="display-shell">
+    <header>
+      <p class="eyebrow">LIVE MUSIC TOURNAMENT</p>
+      <h1 id="tournamentName">SONG CLASH</h1>
+      <p id="stateText" class="display-state">Waiting…</p>
+    </header>
+
+    <section class="display-matchup">
+      <article>
+        <p>SONG A</p>
+        <h2 id="songA">—</h2>
+        <span id="artistA"></span>
+      </article>
+
+      <div class="display-vs">VS</div>
+
+      <article>
+        <p>SONG B</p>
+        <h2 id="songB">—</h2>
+        <span id="artistB"></span>
+      </article>
+    </section>
+
+    <p id="voteProgress" class="vote-progress"></p>
+    <section id="results" class="display-results hidden"></section>
+    <section id="standings" class="standings"></section>
+
+    <footer>
+      Vote at <strong>/voting</strong>
+    </footer>
+  </main>
+
+  <script type="module" src="/js/display/display.js"></script>
+</body>
+</html>

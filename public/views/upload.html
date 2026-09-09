@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>
+    Song Clash Upload
+  </title>
+
+  <link
+    rel="stylesheet"
+    href="/styles/variables.css"
+  >
+
+  <link
+    rel="stylesheet"
+    href="/styles/global.css"
+  >
+
+  <link
+    rel="stylesheet"
+    href="/styles/upload/upload.css"
+  >
+
+</head>
+
+
+<body>
+
+  <main class="upload-page">
+
+
+    <section
+      id="codeSection"
+      class="upload-card"
+    >
+
+      <h1>
+        Upload Your Song
+      </h1>
+
+      <p class="muted">
+        Enter the upload code
+        provided by the host.
+      </p>
+
+
+      <form
+        id="codeForm"
+      >
+
+        <label
+          for="uploadCode"
+        >
+          Upload Code
+        </label>
+
+        <input
+          id="uploadCode"
+
+          name="code"
+
+          type="text"
+
+          autocomplete="off"
+
+          autocapitalize="characters"
+
+          spellcheck="false"
+
+          placeholder="ABC12-DEF34"
+
+          required
+        >
+
+
+        <button
+          type="submit"
+        >
+          Continue
+        </button>
+
+      </form>
+
+    </section>
+
+
+
+    <section
+      id="uploadSection"
+
+      class="upload-card hidden"
+    >
+
+      <h1>
+        Submit Your Song
+      </h1>
+
+      <p class="muted">
+        Your upload code allows
+        one song submission.
+      </p>
+
+
+      <form
+        id="songUploadForm"
+      >
+
+        <label
+          for="songTitle"
+        >
+          Song Title
+        </label>
+
+        <input
+          id="songTitle"
+
+          name="title"
+
+          type="text"
+
+          maxlength="150"
+
+          required
+        >
+
+
+        <label
+          for="songArtist"
+        >
+          Artist
+        </label>
+
+        <input
+          id="songArtist"
+
+          name="artist"
+
+          type="text"
+
+          maxlength="150"
+        >
+
+
+        <label
+          for="songFile"
+        >
+          Music File
+        </label>
+
+        <input
+          id="songFile"
+
+          name="file"
+
+          type="file"
+
+          accept="
+            audio/mpeg,
+            audio/wav,
+            audio/ogg,
+            audio/mp4,
+            audio/aac,
+            audio/flac,
+            audio/webm
+          "
+
+          required
+        >
+
+
+        <p
+          id="fileInfo"
+
+          class="file-info"
+        ></p>
+
+
+        <p class="muted">
+          Maximum file size:
+          50 MB
+        </p>
+
+
+        <button
+          type="submit"
+        >
+          Upload Song
+        </button>
+
+      </form>
+
+    </section>
+
+
+
+    <section
+      id="completeSection"
+
+      class="upload-card hidden"
+    >
+
+      <h1>
+        ✓ Song Submitted
+      </h1>
+
+      <p>
+        Your song was successfully
+        uploaded.
+      </p>
+
+      <p class="muted">
+        Thank you for participating!
+      </p>
+
+    </section>
+
+
+    <p
+      id="message"
+      class="message"
+    ></p>
+
+
+  </main>
+
+
+  <script
+    type="module"
+    src="/js/upload/upload.js"
+  ></script>
+
+</body>
+
+</html>

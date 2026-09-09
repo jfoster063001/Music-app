@@ -1,0 +1,26 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "music-app",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-07",
+
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+
+  "r2_buckets": [
+    {
+      "binding": "MUSIC_BUCKET",
+      "bucket_name": "music-files"
+    }
+  ],
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "music-db",
+      "database_id": "3ff9c7ff-4521-44d0-ae81-540cd9a0ba90"
+    }
+  ]
+}

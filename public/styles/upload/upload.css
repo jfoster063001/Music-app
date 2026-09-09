@@ -1,0 +1,116 @@
+.upload-page {
+  width: min(
+    calc(100% - 2rem),
+    600px
+  );
+
+  margin: 0 auto;
+
+  padding: 3rem 0;
+}
+
+
+.upload-card {
+  background: #ffffff;
+
+  border: 1px solid #dddddd;
+
+  border-radius: 16px;
+
+  padding: 2rem;
+
+  box-shadow:
+    0 12px 40px
+    rgba(0, 0, 0, 0.08);
+}
+
+
+.upload-card form {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 0.75rem;
+}
+
+
+.upload-card label {
+  font-weight: 600;
+
+  margin-top: 0.5rem;
+}
+
+
+.upload-card input {
+  width: 100%;
+
+  box-sizing: border-box;
+
+  padding: 0.75rem;
+
+  border: 1px solid #cccccc;
+
+  border-radius: 8px;
+
+  font: inherit;
+}
+
+
+.upload-card button {
+  margin-top: 1rem;
+
+  padding: 0.85rem;
+
+  border: none;
+
+  border-radius: 8px;
+
+  cursor: pointer;
+
+  font: inherit;
+}
+
+
+.upload-card button:disabled {
+  cursor: wait;
+
+  opacity: 0.6;
+}
+
+
+.hidden {
+  display: none;
+}
+
+
+.file-info {
+  margin: 0.5rem 0;
+
+  font-size: 0.9rem;
+
+  opacity: 0.75;
+}
+
+
+.message {
+  margin-top: 1rem;
+
+  text-align: center;
+
+  font-weight: 600;
+}
+
+
+.message.error {
+  color: #b42318;
+}
+
+
+.message.success {
+  color: #067647;
+}
+
+
+.muted {
+  opacity: 0.7;
+}
